@@ -7,6 +7,7 @@
     "display": "standalone",
     "background_color": "#4A90E2",
     "theme_color": "#4A90E2",
+    "permissions": ["notifications"],
     "icons": [
         {
             "src": "/TimeMaster/logo1.png",
@@ -19,12 +20,6 @@
             "sizes": "512x512",
             "type": "image/png",
             "purpose": "any maskable"
-        },
-        {
-            "src": "/TimeMaster/logo3.png",
-            "sizes": "180x180",
-            "type": "image/png",
-            "purpose": "any"
         }
     ],
     "orientation": "any",
