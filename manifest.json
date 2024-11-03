@@ -1,30 +1,300 @@
-{
-    "name": "TimeMaster",
-    "short_name": "TimeMaster",
-    "description": "נהל את הזמן שלך ביעילות עם שיטת הפומודורו",
-    "start_url": "./",
-    "scope": "./",
-    "display": "standalone",
-    "background_color": "#4A90E2",
-    "theme_color": "#4A90E2",
-    "permissions": ["notifications"],
-    "icons": [
-        {
-            "src": "./logo1.png",
-            "sizes": "192x192",
-            "type": "image/png",
-            "purpose": "any maskable"
-        },
-        {
-            "src": "./logo2.png",
-            "sizes": "512x512",
-            "type": "image/png",
-            "purpose": "any maskable"
-        }
-    ],
-    "orientation": "any",
-    "categories": ["productivity"],
-    "dir": "rtl",
-    "lang": "he",
-    "prefer_related_applications": false
+// זיהוי דפדפן ומערכת הפעלה
+const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+const isChrome = /CriOS/i.test(navigator.userAgent);
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+
+// הצגת הודעה למשתמשי כרום באייפון
+if (isChrome && isIOS) {
+    document.getElementById('browserAlert').style.display = 'block';
 }
+
+class NotificationHandler {
+    static async requestPermission() {
+        if (!('Notification' in window)) return false;
+        
+        if (Notification.permission === 'granted') {
+            return true;
+        }
+
+        try {
+            const permission = await Notification.requestPermission();
+            return permission === 'granted';
+        } catch (error) {
+            console.error('שגיאה בבקשת הרשאות התראה:', error);
+            return false;
+        }
+    }
+
+    static showLocalNotification(title, message) {
+        const notification = document.createElement('div');
+        notification.className = 'local-notification';
+        notification.innerHTML = `
+            <div>
+                <strong>${title}</strong><br>
+                ${message}
+            </div>
+            <button onclick="this.parentElement.remove()" 
+                    style="background:var(--primary-color);color:white;
+                           border:none;padding:5px 10px;border-radius:4px;
+                           cursor:pointer">
+                סגור
+            </button>
+        `;
+        document.body.appendChild(notification);
+        
+        // הפעלת רטט אם אפשר
+        if ('vibrate' in navigator) {
+            navigator.vibrate([200, 100, 200]);
+        }
+
+        setTimeout(() => {
+            notification.remove();
+        }, 5000);
+    }
+}
+
+class PowerManager {
+    constructor() {
+        this.wakeLock = null;
+        this.wakeLockSupported = 'wakeLock' in navigator;
+        this.batteryManager = null;
+        this.initBatteryManager();
+        this.initWakeLock();
+    }
+
+    async initBatteryManager() {
+        if ('getBattery' in navigator) {
+            try {
+                this.batteryManager = await navigator.getBattery();
+                this.batteryManager.addEventListener('levelchange', () => this.handleBatteryChange());
+                this.batteryManager.addEventListener('chargingchange', () => this.handleBatteryChange());
+            } catch (error) {
+                console.warn('Battery API לא נתמך:', error);
+            }
+        }
+    }
+
+    async initWakeLock() {
+        const wakeLockToggle = document.getElementById('preventSleepEnabled');
+        const wakeLockStatus = document.getElementById('wakeLockStatus');
+        
+        if (this.wakeLockSupported && !isIOS) {
+            wakeLockToggle.addEventListener('change', async (e) => {
+                if (e.target.checked) {
+                    await this.acquireWakeLock();
+                } else {
+                    this.releaseWakeLock();
+                }
+            });
+        } else {
+            wakeLockToggle.disabled = true;
+            wakeLockStatus.textContent = 'מניעת שינה לא נתמכת במכשיר זה';
+        }
+    }
+
+    async acquireWakeLock() {
+        if (this.wakeLockSupported && !isIOS) {
+            try {
+                this.wakeLock = await navigator.wakeLock.request('screen');
+                document.getElementById('wakeLockStatus').textContent = 'מסך פעיל';
+                document.getElementById('wakeLockStatus').className = 'wake-lock-status active';
+                
+                document.addEventListener('visibilitychange', async () => {
+                    if (document.visibilityState === 'visible' && !this.wakeLock) {
+                        await this.acquireWakeLock();
+                    }
+                });
+            } catch (error) {
+                console.warn('שגיאה במניעת שינה:', error);
+                NotificationHandler.showLocalNotification('שגיאה', 'לא ניתן למנוע כיבוי מסך');
+            }
+        }
+    }
+
+    releaseWakeLock() {
+        if (this.wakeLock) {
+            this.wakeLock.release();
+            this.wakeLock = null;
+            document.getElementById('wakeLockStatus').textContent = 'מסך כבוי';
+            document.getElementById('wakeLockStatus').className = 'wake-lock-status inactive';
+        }
+    }
+
+    handleBatteryChange() {
+        if (this.batteryManager) {
+            const batteryLevel = this.batteryManager.level * 100;
+            const isCharging = this.batteryManager.charging;
+            
+            if (!isCharging && batteryLevel < 20) {
+                document.getElementById('powerMode').value = 'efficient';
+                this.adjustPowerSettings('efficient');
+                NotificationHandler.showLocalNotification('סוללה חלשה', 'עובר למצב חסכוני');
+            } else if (isCharging || batteryLevel > 50) {
+                document.getElementById('powerMode').value = 'balanced';
+                this.adjustPowerSettings('balanced');
+            }
+        }
+    }
+
+    adjustPowerSettings(mode) {
+        switch (mode) {
+            case 'aggressive': this.setHighPowerMode(); break;
+            case 'balanced': this.setBalancedMode(); break;
+            case 'efficient': this.setEfficientMode(); break;
+        }
+    }
+
+    setHighPowerMode() {
+        if (this.wakeLockSupported && !isIOS) {
+            this.acquireWakeLock();
+        }
+    }
+
+    setBalancedMode() {
+        // אפשר להוסיף לוגיקה נוספת בעתיד
+    }
+
+    setEfficientMode() {
+        this.releaseWakeLock();
+    }
+}
+
+class PomodoroTimer {
+    constructor() {
+        this.workTime = 25 * 60;
+        this.breakTime = 5 * 60;
+        this.currentTime = this.workTime;
+        this.isRunning = false;
+        this.isWorkTime = true;
+        this.timer = null;
+        
+        this.powerManager = new PowerManager();
+        this.initializeElements();
+        this.initializeEventListeners();
+        this.loadState();
+
+        // בקשת הרשאות התראה בהתחלה
+        NotificationHandler.requestPermission();
+    }
+
+    initializeElements() {
+        this.timerDisplay = document.getElementById('timer');
+        this.startBtn = document.getElementById('startBtn');
+        this.resetBtn = document.getElementById('resetBtn');
+        this.statusText = document.getElementById('status');
+        this.workTimeInput = document.getElementById('workTime');
+        this.breakTimeInput = document.getElementById('breakTime');
+    }
+
+    initializeEventListeners() {
+        this.startBtn.addEventListener('click', () => this.toggleTimer());
+        this.resetBtn.addEventListener('click', () => this.resetTimer());
+        
+        this.workTimeInput.addEventListener('change', () => {
+            this.workTime = this.workTimeInput.value * 60;
+            if (this.isWorkTime) this.currentTime = this.workTime;
+            this.updateDisplay();
+        });
+        
+        this.breakTimeInput.addEventListener('change', () => {
+            this.breakTime = this.breakTimeInput.value * 60;
+            if (!this.isWorkTime) this.currentTime = this.breakTime;
+            this.updateDisplay();
+        });
+
+        // מאזין למצב נראות הדף
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                this.updateDisplay();
+            }
+        });
+    }
+
+    toggleTimer() {
+        if (this.isRunning) {
+            this.pauseTimer();
+        } else {
+            this.startTimer();
+        }
+    }
+
+    startTimer() {
+        this.isRunning = true;
+        this.startBtn.textContent = 'השהה';
+        
+        this.timer = setInterval(() => {
+            this.currentTime--;
+            if (this.currentTime <= 0) {
+                this.handleTimerComplete();
+            }
+            this.updateDisplay();
+            this.saveState();
+        }, 1000);
+    }
+
+    pauseTimer() {
+        this.isRunning = false;
+        this.startBtn.textContent = 'המשך';
+        clearInterval(this.timer);
+        this.saveState();
+    }
+
+    resetTimer() {
+        clearInterval(this.timer);
+        this.isRunning = false;
+        this.isWorkTime = true;
+        this.currentTime = this.workTime;
+        this.startBtn.textContent = 'התחל';
+        this.statusText.textContent = 'זמן עבודה';
+        this.updateDisplay();
+        this.saveState();
+    }
+
+    handleTimerComplete() {
+        this.isWorkTime = !this.isWorkTime;
+        this.currentTime = this.isWorkTime ? this.workTime : this.breakTime;
+        this.statusText.textContent = this.isWorkTime ? 'זמן עבודה' : 'זמן הפסקה';
+        
+        const message = this.isWorkTime ? 'זמן לחזור לעבודה!' : 'זמן להפסקה!';
+        NotificationHandler.showLocalNotification('TimeMaster', message);
+        
+        this.saveState();
+    }
+
+    updateDisplay() {
+        const minutes = Math.floor(this.currentTime / 60);
+        const seconds = this.currentTime % 60;
+        this.timerDisplay.textContent = 
+            `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    }
+
+    saveState() {
+        localStorage.setItem('pomodoroState', JSON.stringify({
+            currentTime: this.currentTime,
+            isWorkTime: this.isWorkTime,
+            workTime: this.workTime,
+            breakTime: this.breakTime,
+            timestamp: Date.now()
+        }));
+    }
+
+    loadState() {
+        const savedState = localStorage.getItem('pomodoroState');
+        if (savedState) {
+            const state = JSON.parse(savedState);
+            this.workTime = state.workTime;
+            this.breakTime = state.breakTime;
+            this.isWorkTime = state.isWorkTime;
+            this.currentTime = state.currentTime;
+            
+            // עדכון שדות הקלט
+            this.workTimeInput.value = this.workTime / 60;
+            this.breakTimeInput.value = this.breakTime / 60;
+            this.statusText.textContent = this.isWorkTime ? 'זמן עבודה' : 'זמן הפסקה';
+            this.updateDisplay();
+        }
+    }
+}
+
+// יצירת המופע של הטיימר
+const pomodoro = new PomodoroTimer();
