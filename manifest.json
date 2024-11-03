@@ -1,0 +1,28 @@
+{
+    "name": "TimeMaster",
+    "short_name": "TimeMaster",
+    "description": "נהל את הזמן שלך ביעילות עם שיטת הפומודורו",
+    "start_url": "/TimeMaster/",
+    "display": "standalone",
+    "background_color": "#4A90E2",
+    "theme_color": "#4A90E2",
+    "icons": [
+        {
+            "src": "/TimeMaster/logo1.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "/TimeMaster/logo2.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ],
+    "orientation": "any",
+    "categories": ["productivity"],
+    "dir": "rtl",
+    "lang": "he",
+    "prefer_related_applications": false
+}
