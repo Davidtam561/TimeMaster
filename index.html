@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TimeMaster - נהל את הזמן שלך</title>
+    <!-- Favicon & App Icons -->
+    <link rel="icon" type="image/svg+xml" href="/TimeMaster/logo.svg">
+    <link rel="icon" type="image/png" sizes="32x32" href="/TimeMaster/logo1.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/TimeMaster/logo2.png">
+    <link rel="apple-touch-icon" href="/TimeMaster/logo3.png">   
+    <!-- PWA Support -->
+    <link rel="manifest" href="/TimeMaster/manifest.json">
+    <meta name="theme-color" content="#4A90E2">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="TimeMaster">
+    <meta name="description" content="נהל את הזמן שלך ביעילות עם שיטת הפומודורו">
+    <meta property="og:title" content="TimeMaster">
+    <meta property="og:description" content="נהל את הזמן שלך ביעילות עם שיטת הפומודורו">
+    <meta property="og:image" content="/TimeMaster/logo1.png">
+    <style>:root{--primary-color:#4A90E2;--secondary-color:#357ABD;--background-color:#ECF0F1}*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background-color:var(--background-color);min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:2rem}.container{background-color:#fff;border-radius:10px;padding:2rem;box-shadow:0 0 10px rgba(0,0,0,0.1);text-align:center;width:100%;max-width:500px}.app-header{display:flex;align-items:center;gap:1rem;margin-bottom:2rem}.app-logo{width:50px;height:50px;animation:pulse 2s infinite}.timer{font-size:6rem;font-weight:700;color:var(--primary-color);margin:2rem 0}.controls{display:flex;justify-content:center;gap:1rem;margin-bottom:2rem}button{padding:.8rem 1.5rem;border:none;border-radius:5px;cursor:pointer;font-size:1rem;transition:transform .1s}button:active{transform:scale(0.98)}.start{background-color:var(--primary-color);color:#fff}.reset{background-color:var(--secondary-color);color:#fff}.settings{margin-top:2rem}.settings label{display:block;margin-bottom:.5rem}.settings input{width:100%;padding:.5rem;margin-bottom:1rem;border:1px solid #ddd;border-radius:5px}.status{margin-top:1rem;font-weight:700;color:#666}.system-message{position:fixed;bottom:20px;right:20px;padding:15px 20px;border-radius:8px;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,0.1);max-width:300px;z-index:1000;display:none}.system-message.info{border-right:4px solid var(--primary-color)}.system-message.warning{border-right:4px solid #ffd93d}.system-message.error{border-right:4px solid #ff6b6b}.settings-panel{background:#f8f9fa;border-radius:8px;padding:15px;margin-top:20px}.notification-settings{display:grid;gap:10px;margin:10px 0}.power-settings{margin-top:15px;padding:10px;border-top:1px solid #dee2e6}.wake-lock-status{display:inline-block;padding:4px 8px;border-radius:4px;margin-right:10px;font-size:.9em}.wake-lock-status.active{background:var(--primary-color);color:#fff}.wake-lock-status.inactive{background:#ff6b6b;color:#fff}.toggle-switch{position:relative;display:inline-block;width:50px;height:24px}.toggle-switch input{opacity:0;width:0;height:0}.slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background-color:#ccc;border-radius:24px;transition:.4s}.slider:before{position:absolute;content:"";height:16px;width:16px;left:4px;bottom:4px;background-color:#fff;border-radius:50%;transition:.4s}input:checked+.slider{background-color:var(--primary-color)}input:checked+.slider:before{transform:translateX(26px)}@keyframes pulse{0%{transform:scale(1)}50%{transform:scale(1.05)}100%{transform:scale(1)}}</style>
+</head>
+<body>
+    <div class="container">
+        <div class="app-header">
+            <img src="/TimeMaster/logo.svg" alt="TimeMaster" class="app-logo">
+            <h1>TimeMaster</h1>
+        </div>
+        <div class="timer" id="timer">25:00</div>
+        <div class="controls">
+            <button class="start" id="startBtn">התחל</button>
+            <button class="reset" id="resetBtn">אפס</button>
+        </div>
+        <div class="status" id="status">זמן עבודה</div>
+        <div class="settings">
+            <h2>הגדרות בסיסיות</h2>
+            <label>זמן עבודה (דקות):
+                <input type="number" id="workTime" value="25" min="1">
+            </label>
+            <label>זמן הפסקה (דקות):
+                <input type="number" id="breakTime" value="5" min="1">
+            </label>
+        </div>
+        <div class="settings-panel">
+            <h3>הגדרות התראות וחיסכון בסוללה</h3>        
+            <div class="notification-settings">
+                <label class="toggle-switch">
+                    <input type="checkbox" id="notificationsEnabled" checked>
+                    <span class="slider"></span>
+                </label>
+                <span>התראות מופעלות</span>
+                <div>
+                    <label>סוג התראה:</label>
+                    <select id="notificationType">
+                        <option value="all">הכל (רטט + צליל)</option>
+                        <option value="silent">שקט (ויזואלי בלבד)</option>
+                        <option value="vibrate">רטט בלבד</option>
+                        <option value="sound">צליל בלבד</option>
+                    </select>
+                </div>
+                <div>
+                    <label>עוצמת התראה:</label>
+                    <select id="notificationUrgency">
+                        <option value="high">גבוהה (עוקף מצב שקט)</option>
+                        <option value="normal">רגילה</option>
+                        <option value="low">נמוכה</option>
+                    </select>
+                </div>
+            </div>
+            <div class="power-settings">
+                <h4>ניהול צריכת חשמל</h4>
+                <div id="wakeLockStatus" class="wake-lock-status inactive">מצב שינה מושבת</div>               
+                <label class="toggle-switch">
+                    <input type="checkbox" id="preventSleepEnabled">
+                    <span class="slider"></span>
+                </label>
+                <span>מנע כיבוי מסך</span>
+                <div>
+                    <label>מצב חיסכון בסוללה:</label>
+                    <select id="powerMode">
+                        <option value="aggressive">ביצועים מקסימליים</option>
+                        <option value="balanced">מאוזן</option>
+                        <option value="efficient">חסכוני</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="system-message" id="systemMessage"></div>
+    <script>
+        // Class definitions
+        class PowerManager {
+            constructor() {
+                this.wakeLock = null;
+                this.wakeLockSupported = 'wakeLock' in navigator;
+                this.batteryManager = null;
+                this.initBatteryManager();
+                this.initWakeLock();
+            }
+            async initBatteryManager() {
+                if ('getBattery' in navigator) {
+                    try {
+                        this.batteryManager = await navigator.getBattery();
+                        this.batteryManager.addEventListener('levelchange', () => this.handleBatteryChange());
+                        this.batteryManager.addEventListener('chargingchange', () => this.handleBatteryChange());
+                    } catch (error) {
+                        console.warn('Battery API not supported:', error);
+                    }
+                }
+            }
+            async initWakeLock() {
+                const wakeLockToggle = document.getElementById('preventSleepEnabled');
+                const wakeLockStatus = document.getElementById('wakeLockStatus');
+                if (this.wakeLockSupported) {
+                    wakeLockToggle.addEventListener('change', async (e) => {
+                        if (e.target.checked) {
+                            await this.acquireWakeLock();
+                        } else {
+                            this.releaseWakeLock();
+                        }
+                    });
+                } else {
+                    wakeLockToggle.disabled = true;
+                    wakeLockStatus.textContent = 'Wake Lock לא נתמך בדפדפן זה';
+                }
+            }
+            async acquireWakeLock() {
+                if (this.wakeLockSupported) {
+                    try {
+                        this.wakeLock = await navigator.wakeLock.request('screen');
+                        document.getElementById('wakeLockStatus').textContent = 'מסך פעיל';
+                        document.getElementById('wakeLockStatus').className = 'wake-lock-status active';
+                        document.addEventListener('visibilitychange', async () => {
+                            if (document.visibilityState === 'visible' && !this.wakeLock) {
+                                await this.acquireWakeLock();
+                            }
+                        });
+                    } catch (error) {
+                        console.warn('Wake Lock request failed:', error);
+                    }
+                }
+            }
+            releaseWakeLock() {
+                if (this.wakeLock) {
+                    this.wakeLock.release();
+                    this.wakeLock = null;
+                    document.getElementById('wakeLockStatus').textContent = 'מסך כבוי';
+                    document.getElementById('wakeLockStatus').className = 'wake-lock-status inactive';
+                }
+            }
+            handleBatteryChange() {
+                if (this.batteryManager) {
+                    const batteryLevel = this.batteryManager.level * 100;
+                    const isCharging = this.batteryManager.charging;             
+                    if (!isCharging && batteryLevel < 20) {
+                        document.getElementById('powerMode').value = 'efficient';
+                        this.adjustPowerSettings('efficient');
+                    } else if (isCharging || batteryLevel > 50) {
+                        document.getElementById('powerMode').value = 'balanced';
+                        this.adjustPowerSettings('balanced');
+                    }
+                }
+            }
+            adjustPowerSettings(mode) {
+                switch (mode) {
+                    case 'aggressive':
+                        this.setHighPowerMode();
+                        break;
+                    case 'balanced':
+                        this.setBalancedMode();
+                        break;
+                    case 'efficient':
+                        this.setEfficientMode();
+                        break;
+                }
+            }
+            setHighPowerMode() {
+                if (this.wakeLockSupported) {
+                    this.acquireWakeLock();
+                }
+                if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+                    navigator.serviceWorker.controller.postMessage({
+                        type: 'SET_SYNC_INTERVAL',
+                        interval: 1000
+                    });
+                }
+            }
+            setBalancedMode() {
+                if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+                    navigator.serviceWorker.controller.postMessage({
+                        type: 'SET_SYNC_INTERVAL',
+                        interval: 5000
+                    });
+                }
+            }
+            setEfficientMode() {
+                this.releaseWakeLock();
+                if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+                    navigator.serviceWorker.controller.postMessage({
+                        type: 'SET_SYNC_INTERVAL',
+                        interval: 15000
+                    });
+                }
+            }
+        }
+        class NotificationManager {
+            constructor() {
+                this.initNotificationSettings();
+            }
+            initNotificationSettings() {
+                const notificationsToggle = document.getElementById('notificationsEnabled');
+                const notificationType = document.getElementById('notificationType');
+                const notificationUrgency = document.getElementById('notificationUrgency');
+                notificationsToggle.addEventListener('change', (e) => {
+                    this.toggleNotifications(e.target.checked);
+                });
+                notificationType.addEventListener('change', (e) => {
+                    this.updateNotificationType(e.target.value);
+                });
+                notificationUrgency.addEventListener('change', (e) => {
+                    this.updateNotificationUrgency(e.target.value);
+                });
+            }
+            async toggleNotifications(enabled) {
+                if (enabled) {
+                    const permission = await Notification.requestPermission();
+                    if (permission !== 'granted') {
+                        document.getElementById('notificationsEnabled').checked = false;
+                    }
+                }
+            }
+            updateNotificationType(type) {
+                const options = {
+                    all: {
+                        vibrate: [200, 100, 200],
+                        silent: false
+                    },
+                    silent: {
+                        vibrate: false,
+                        silent: true
+                    },
+                    vibrate: {
+                        vibrate: [200, 100, 200],
+                        silent: true
+                    },
+                    sound: {
+                        vibrate: false,
+                        silent: false
+                    }
+                };
+                localStorage.setItem('notificationType', JSON.stringify(options[type]));   }
+            updateNotificationUrgency(urgency) {
+                const options = {
+                    high: {
+                        priority: 2,
+                        requireInteraction: true    },
+                    normal: {
+                        priority: 1,
+                        requireInteraction: false       },
+                    low: {
+                        priority: 0,
+                        requireInteraction: false                }       };
+                localStorage.setItem('notificationUrgency', JSON.stringify(options[urgency]));    }
+            async showNotification(title, options = {}) {
+                if
+if (!document.getElementById('notificationsEnabled').checked) {
+                    return;       }
+                const type = JSON.parse(localStorage.getItem('notificationType') || '{}');
+                const urgency = JSON.parse(localStorage.getItem('notificationUrgency') || '{}');
+                const notificationOptions = {
+                    ...options,
+                    ...type,
+                    ...urgency,
+                    timestamp: Date.now()  };
+                if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+                    navigator.serviceWorker.controller.postMessage({
+                        type: 'SHOW_NOTIFICATION',
+                        title,
+                        options: notificationOptions      });
+                } else if ('Notification' in window) {
+                    new Notification(title, notificationOptions);     }         }     }
+        class PomodoroTimer {
+            constructor() {
+                this.workTime = 25 * 60;
+                this.breakTime = 5 * 60;
+                this.currentTime = this.workTime;
+                this.isRunning = false;
+                this.isWorkTime = true;
+                this.timer = null;         
+                this.powerManager = new PowerManager();
+                this.notificationManager = new NotificationManager();               
+                this.timerDisplay = document.getElementById('timer');
+                this.startBtn = document.getElementById('startBtn');
+                this.resetBtn = document.getElementById('resetBtn');
+                this.statusText = document.getElementById('status');
+                this.workTimeInput = document.getElementById('workTime');
+                this.breakTimeInput = document.getElementById('breakTime');
+                document.getElementById('powerMode').addEventListener('change', (e) => {
+                    this.powerManager.adjustPowerSettings(e.target.value);          });
+                this.initializeEventListeners();
+                this.setupNotifications();
+                this.initDefaultSettings();
+                this.loadState();      }
+            initializeEventListeners() {
+                this.startBtn.addEventListener('click', () => this.toggleTimer());
+                this.resetBtn.addEventListener('click', () => this.resetTimer());              
+                this.workTimeInput.addEventListener('change', () => {
+                    this.workTime = this.workTimeInput.value * 60;
+                    if (this.isWorkTime) this.currentTime = this.workTime;
+                    this.updateDisplay();    });
+                this.breakTimeInput.addEventListener('change', () => {
+                    this.breakTime = this.breakTimeInput.value * 60;
+                    if (!this.isWorkTime) this.currentTime = this.breakTime;
+                    this.updateDisplay();        });     }
+            async setupNotifications() {
+                if ('Notification' in window) {
+                    const permission = await Notification.requestPermission();
+                    if (permission === 'granted') {
+                        localStorage.setItem('notificationPermission', 'granted');    }             }  }
+            toggleTimer() {
+                if (this.isRunning) {
+                    this.pauseTimer();    } else {
+                    this.startTimer();      }  }
+            startTimer() {
+                this.isRunning = true;
+                this.startBtn.textContent = 'השהה';              
+                this.timer = setInterval(() => {
+                    this.currentTime--;                   
+                    if (this.currentTime <= 0) {
+                        this.handleTimerComplete();     }                   
+                    this.updateDisplay();
+                    this.saveState();   }, 1000);  }
+            pauseTimer() {
+                this.isRunning = false;
+                this.startBtn.textContent = 'המשך';
+                clearInterval(this.timer);
+                this.saveState(); }
+            resetTimer() {
+                clearInterval(this.timer);
+                this.isRunning = false;
+                this.isWorkTime = true;
+                this.currentTime = this.workTime;
+                this.startBtn.textContent = 'התחל';
+                this.statusText.textContent = 'זמן עבודה';
+                this.updateDisplay();
+                this.saveState(); }
+            handleTimerComplete() {
+                this.isWorkTime = !this.isWorkTime;
+                this.currentTime = this.isWorkTime ? this.workTime : this.breakTime;
+                this.statusText.textContent = this.isWorkTime ? 'זמן עבודה' : 'זמן הפסקה';
+                const message = this.isWorkTime ? 'זמן לחזור לעבודה!' : 'זמן להפסקה!';
+                this.notificationManager.showNotification('TimeMaster', {
+                    body: message,
+                    icon: '/TimeMaster/logo1.png'    });
+                this.saveState();   }
+            updateDisplay() {
+                const minutes = Math.floor(this.currentTime / 60);
+                const seconds = this.currentTime % 60;
+                this.timerDisplay.textContent = 
+                    `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;  }
+            saveState() {
+                const state = {
+                    currentTime: this.currentTime,
+                    isWorkTime: this.isWorkTime,
+                    workTime: this.workTime,
+                    breakTime: this.breakTime,
+                    timestamp: Date.now()    };
+                localStorage.setItem('pomodoroState', JSON.stringify(state));  }
+            loadState() {
+                const savedState = localStorage.getItem('pomodoroState');
+                if (savedState) {
+                    const state = JSON.parse(savedState);
+                    const elapsedTime = Math.floor((Date.now() - state.timestamp) / 1000);
+                    this.workTime = state.workTime;
+                    this.breakTime = state.breakTime;
+                    this.isWorkTime = state.isWorkTime;
+                    this.currentTime = Math.max(0, state.currentTime - elapsedTime);
+                    this.workTimeInput.value = this.workTime / 60;
+                    this.breakTimeInput.value = this.breakTime / 60;
+                    this.statusText.textContent = this.isWorkTime ? 'זמן עבודה' : 'זמן הפסקה';
+                    this.updateDisplay();     } }
+            initDefaultSettings() {
+                const savedPowerMode = localStorage.getItem('powerMode') || 'balanced';
+                document.getElementById('powerMode').value = savedPowerMode;
+                this.powerManager.adjustPowerSettings(savedPowerMode);   }    }
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/TimeMaster/sw.js')
+                .then(registration => {
+                    console.log('ServiceWorker registration successful'); })
+                .catch(err => {
+                    console.log('ServiceWorker registration failed: ', err);
+                }); }
+        const pomodoro = new PomodoroTimer();
+    </script>
+</body>
+</html>
