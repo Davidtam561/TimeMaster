@@ -1,14 +1,13 @@
 const CACHE_NAME = 'timemaster-v1';
 const urlsToCache = [
-    '/TimeMaster/',
-    '/TimeMaster/index.html',
-    '/TimeMaster/logo.svg',
-    '/TimeMaster/logo1.png',
-    '/TimeMaster/logo2.png',
-    '/TimeMaster/logo3.png',
-    '/TimeMaster/manifest.json'
+    './',
+    './index.html',
+    './logo.svg',
+    './logo1.png',
+    './logo2.png',
+    './logo3.png',
+    './manifest.json'
 ];
-
 self.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open(CACHE_NAME)
