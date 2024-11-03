@@ -1,13 +1,13 @@
 const CACHE_NAME = 'timemaster-v1';
 const urlsToCache = [
-    './',
-    './index.html',
-    './logo.svg',
-    './logo1.png',
-    './logo2.png',
-    './logo3.png',
-    './manifest.json',
-    './script.js'
+    '.',
+    'index.html',
+    'logo.svg',
+    'logo1.png',
+    'logo2.png',
+    'logo3.png',
+    'manifest.json',
+    'script.js'
 ];
 
 self.addEventListener('install', (event) => {
