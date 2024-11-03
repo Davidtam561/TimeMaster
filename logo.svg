@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+    <!-- Background Circle -->
+    <circle cx="256" cy="256" r="256" fill="#4A90E2"/>
+    
+    <!-- Timer Body -->
+    <path d="M256 120 L256 256 L350 300" 
+          stroke="white" 
+          stroke-width="24" 
+          stroke-linecap="round"
+          fill="none"/>
+    
+    <!-- Timer Outline -->
+    <circle cx="256" cy="256" r="140" 
+            stroke="white" 
+            stroke-width="24" 
+            fill="none"/>
+    
+    <!-- Top Buttons -->
+    <rect x="216" y="80" width="80" height="30" 
+          fill="white" 
+          rx="15"/>
+    
+    <!-- Decorative Lines -->
+    <path d="M150 150 L180 180" 
+          stroke="white" 
+          stroke-width="12" 
+          stroke-linecap="round"/>
+    <path d="M362 150 L332 180" 
+          stroke="white" 
+          stroke-width="12" 
+          stroke-linecap="round"/>
+    
+    <!-- Master Crown -->
+    <path d="M206 60 L256 30 L306 60" 
+          stroke="white" 
+          stroke-width="12" 
+          stroke-linecap="round"
+          fill="none"/>
+    
+    <!-- Focus Waves -->
+    <path d="M256 420 C180 420, 150 380, 120 380" 
+          stroke="white" 
+          stroke-width="12" 
+          stroke-linecap="round"
+          fill="none"/>
+    <path d="M256 420 C332 420, 362 380, 392 380" 
+          stroke="white" 
+          stroke-width="12" 
+          stroke-linecap="round"
+          fill="none"/>
+</svg>
