@@ -28,16 +28,8 @@
         }
     ],
     "orientation": "any",
-    "categories": ["productivity", "utilities"],
+    "categories": ["productivity"],
     "dir": "rtl",
     "lang": "he",
-    "prefer_related_applications": false,
-    "screenshots": [
-        {
-            "src": "/TimeMaster/logo2.png",
-            "type": "image/png",
-            "sizes": "512x512",
-            "form_factor": "wide"
-        }
-    ]
+    "prefer_related_applications": false
 }
