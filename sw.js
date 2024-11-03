@@ -6,8 +6,10 @@ const urlsToCache = [
     './logo1.png',
     './logo2.png',
     './logo3.png',
-    './manifest.json'
+    './manifest.json',
+    './script.js'
 ];
+
 self.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open(CACHE_NAME)
@@ -35,67 +37,10 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
         caches.match(event.request)
             .then((response) => response || fetch(event.request))
-    );
-});
-
-self.addEventListener('push', (event) => {
-    const options = {
-        body: event.data?.text() || 'זמן לבדוק את הטיימר!',
-        icon: '/TimeMaster/logo1.png',
-        badge: '/TimeMaster/logo3.png',
-        vibrate: [200, 100, 200],
-        requireInteraction: true,
-        silent: false,
-        data: {
-            dateOfArrival: Date.now(),
-            primaryKey: 1
-        },
-        actions: [
-            {
-                action: 'open',
-                title: 'פתח את האפליקציה'
-            },
-            {
-                action: 'close',
-                title: 'סגור'
-            }
-        ]
-    };
-
-    event.waitUntil(
-        self.registration.showNotification('TimeMaster', options)
-    );
-});
-
-self.addEventListener('notificationclick', (event) => {
-    event.notification.close();
-
-    if (event.action === 'close') {
-        return;
-    }
-
-    event.waitUntil(
-        clients.matchAll({type: 'window', includeUncontrolled: true})
-            .then((clientList) => {
-                const hadWindowToFocus = clientList.some((client) => {
-                    if (client.url === '/TimeMaster/') {
-                        client.focus();
-                        return true;
-                    }
-                    return false;
-                });
-
-                if (!hadWindowToFocus) {
-                    clients.openWindow('/TimeMaster/').then((windowClient) => {
-                        windowClient?.focus();
-                    });
+            .catch(() => {
+                if (event.request.mode === 'navigate') {
+                    return caches.match('./index.html');
                 }
             })
     );
-});
-
-self.addEventListener('message', (event) => {
-    if (event.data.type === 'SKIP_WAITING') {
-        self.skipWaiting();
-    }
 });
