@@ -57,36 +57,82 @@ class NotificationHandler {
 
     static async showNotification(title, message) {
         try {
-            if (Notification.permission !== 'granted') {
-                const granted = await this.requestPermission();
-                if (!granted) return;
+            // בדיקה אם זה כרום במובייל
+            const isMobileChrome = /CriOS/i.test(navigator.userAgent) || 
+                                 (/Chrome/i.test(navigator.userAgent) && /Mobile/i.test(navigator.userAgent));
+
+            if (isMobileChrome) {
+                // שימוש בהתראה מותאמת למובייל
+                this.showMobileNotification(title, message);
+                return;
             }
 
-            const options = {
-                body: message,
-                icon: 'logo1.png',
-                badge: 'logo3.png',
-                tag: 'timer-notification',
-                renotify: true,
-                requireInteraction: true,
-                vibrate: [200, 100, 200]
-            };
+            if (Notification.permission === 'granted') {
+                const options = {
+                    body: message,
+                    icon: 'logo1.png',
+                    badge: 'logo3.png',
+                    vibrate: [200, 100, 200],
+                    requireInteraction: true,
+                    tag: 'timer-notification',
+                    renotify: true
+                };
 
-            if ('serviceWorker' in navigator && navigator.serviceWorker.ready) {
-                const registration = await navigator.serviceWorker.ready;
-                await registration.showNotification(title, options);
-            } else {
-                const notification = new Notification(title, options);
-                setTimeout(() => notification.close(), 5000);
-            }
+                if ('serviceWorker' in navigator && navigator.serviceWorker.ready) {
+                    const registration = await navigator.serviceWorker.ready;
+                    await registration.showNotification(title, options);
+                } else {
+                    new Notification(title, options);
+                }
 
-            if ('vibrate' in navigator) {
-                navigator.vibrate([200, 100, 200]);
+                if ('vibrate' in navigator) {
+                    navigator.vibrate([200, 100, 200]);
+                }
             }
         } catch (error) {
             console.error('שגיאה בשליחת התראה:', error);
-            this.showLocalNotification(title, message);
+            this.showMobileNotification(title, message);
         }
+    }
+
+    static showMobileNotification(title, message) {
+        const notification = document.createElement('div');
+        notification.className = 'mobile-notification';
+        notification.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 16px;
+            text-align: center;
+            z-index: 10000;
+            animation: slideDown 0.3s ease-out;
+        `;
+
+        notification.innerHTML = `
+            <div style="font-weight: bold; margin-bottom: 8px;">${title}</div>
+            <div>${message}</div>
+        `;
+
+        document.body.appendChild(notification);
+
+        if ('vibrate' in navigator) {
+            navigator.vibrate([200, 100, 200]);
+        }
+
+        try {
+            const audio = new Audio('data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgA');
+            audio.play();
+        } catch (e) {
+            console.log('לא ניתן להפעיל צליל');
+        }
+
+        setTimeout(() => {
+            notification.style.animation = 'slideUp 0.3s ease-out';
+            setTimeout(() => notification.remove(), 300);
+        }, 5000);
     }
 
     static showLocalNotification(title, message) {
