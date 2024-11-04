@@ -2,7 +2,7 @@
     "name": "TimeMaster",
     "short_name": "TimeMaster",
     "description": "נהל את הזמן שלך ביעילות עם שיטת הפומודורו",
-    "start_url": "./",
+    "start_url": ".",
     "display": "standalone",
     "background_color": "#4A90E2",
     "theme_color": "#4A90E2",
@@ -23,5 +23,9 @@
     "orientation": "any",
     "categories": ["productivity"],
     "dir": "rtl",
-    "lang": "he"
+    "lang": "he",
+    "notifications": {
+        "vibrate": [200, 100, 200]
+    },
+    "permissions": ["notifications"]
 }
