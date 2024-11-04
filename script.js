@@ -1,14 +1,94 @@
-// Service Worker Registration
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js')
-            .then(registration => {
-                console.log('ServiceWorker registration successful');
-            })
-            .catch(err => {
-                console.log('ServiceWorker registration failed: ', err);
-            });
-    });
+// זיהוי דפדפן ומערכת הפעלה
+const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+const isChrome = /CriOS/i.test(navigator.userAgent);
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+
+// הצגת הודעה למשתמשי כרום באייפון
+if (isChrome && isIOS) {
+    document.getElementById('browserAlert').style.display = 'block';
+}
+
+class NotificationHandler {
+    static async requestPermission() {
+        if (!('Notification' in window)) {
+            alert('הדפדפן שלך לא תומך בהתראות');
+            return false;
+        }
+        
+        if (Notification.permission === 'default') {
+            // מבקש הרשאה מהמשתמש
+            const permission = await Notification.requestPermission();
+            if (permission === 'granted') {
+                // משתמש בהתראת בדיקה
+                new Notification('התראות הופעלו בהצלחה!', {
+                    body: 'תקבל התראה כשהטיימר יסתיים',
+                    icon: 'logo1.png'
+                });
+                return true;
+            }
+        }
+
+        return Notification.permission === 'granted';
+    }
+
+    static async showNotification(title, message) {
+        // קודם מנסה לשלוח התראת דפדפן רגילה
+        if (Notification.permission === 'granted') {
+            try {
+                // אם יש Service Worker, משתמש בו
+                if ('serviceWorker' in navigator && navigator.serviceWorker.ready) {
+                    const registration = await navigator.serviceWorker.ready;
+                    await registration.showNotification(title, {
+                        body: message,
+                        icon: 'logo1.png',
+                        badge: 'logo3.png',
+                        vibrate: [200, 100, 200],
+                        requireInteraction: true
+                    });
+                } else {
+                    // אחרת משתמש בהתראה רגילה
+                    new Notification(title, {
+                        body: message,
+                        icon: 'logo1.png'
+                    });
+                }
+
+                // מנסה להפעיל רטט אם אפשר
+                if ('vibrate' in navigator) {
+                    navigator.vibrate([200, 100, 200]);
+                }
+            } catch (error) {
+                console.error('שגיאה בשליחת התראה:', error);
+            }
+        }
+
+        // בכל מקרה מציג גם התראה מקומית באתר
+        NotificationHandler.showLocalNotification(title, message);
+    }
+
+    static showLocalNotification(title, message) {
+        const notification = document.createElement('div');
+        notification.className = 'local-notification';
+        notification.innerHTML = `
+            <div>
+                <strong>${title}</strong><br>
+                ${message}
+            </div>
+            <button onclick="this.parentElement.remove()" 
+                    style="background:var(--primary-color);color:white;
+                           border:none;padding:5px 10px;border-radius:4px;
+                           cursor:pointer">
+                סגור
+            </button>
+        `;
+        document.body.appendChild(notification);
+        
+        if ('vibrate' in navigator) {
+            navigator.vibrate([200, 100, 200]);
+        }
+
+        setTimeout(() => notification.remove(), 5000);
+    }
 }
 
 class PowerManager {
@@ -27,7 +107,7 @@ class PowerManager {
                 this.batteryManager.addEventListener('levelchange', () => this.handleBatteryChange());
                 this.batteryManager.addEventListener('chargingchange', () => this.handleBatteryChange());
             } catch (error) {
-                console.warn('Battery API not supported:', error);
+                console.warn('Battery API לא נתמך:', error);
             }
         }
     }
@@ -35,7 +115,8 @@ class PowerManager {
     async initWakeLock() {
         const wakeLockToggle = document.getElementById('preventSleepEnabled');
         const wakeLockStatus = document.getElementById('wakeLockStatus');
-        if (this.wakeLockSupported) {
+        
+        if (this.wakeLockSupported && !isIOS) {
             wakeLockToggle.addEventListener('change', async (e) => {
                 if (e.target.checked) {
                     await this.acquireWakeLock();
@@ -45,18 +126,18 @@ class PowerManager {
             });
         } else {
             wakeLockToggle.disabled = true;
-            wakeLockStatus.textContent = 'Wake Lock לא נתמך בדפדפן זה';
+            wakeLockStatus.textContent = 'מניעת שינה לא נתמכת במכשיר זה';
         }
     }
 
     async acquireWakeLock() {
-        if (this.wakeLockSupported) {
+        if (this.wakeLockSupported && !isIOS) {
             try {
                 this.wakeLock = await navigator.wakeLock.request('screen');
                 document.getElementById('wakeLockStatus').textContent = 'מסך פעיל';
                 document.getElementById('wakeLockStatus').className = 'wake-lock-status active';
             } catch (error) {
-                console.warn('Wake Lock request failed:', error);
+                console.warn('שגיאה במניעת שינה:', error);
             }
         }
     }
@@ -74,9 +155,11 @@ class PowerManager {
         if (this.batteryManager) {
             const batteryLevel = this.batteryManager.level * 100;
             const isCharging = this.batteryManager.charging;
+            
             if (!isCharging && batteryLevel < 20) {
                 document.getElementById('powerMode').value = 'efficient';
                 this.adjustPowerSettings('efficient');
+                NotificationHandler.showLocalNotification('סוללה חלשה', 'עובר למצב חסכוני');
             } else if (isCharging || batteryLevel > 50) {
                 document.getElementById('powerMode').value = 'balanced';
                 this.adjustPowerSettings('balanced');
@@ -93,98 +176,17 @@ class PowerManager {
     }
 
     setHighPowerMode() {
-        if (this.wakeLockSupported) { this.acquireWakeLock(); }
+        if (this.wakeLockSupported && !isIOS) {
+            this.acquireWakeLock();
+        }
     }
 
     setBalancedMode() {
-        if (this.wakeLockSupported) { this.releaseWakeLock(); }
+        this.releaseWakeLock();
     }
 
     setEfficientMode() {
         this.releaseWakeLock();
-    }
-}
-
-class NotificationManager {
-    constructor() {
-        this.isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-        this.hasNotificationAPI = 'Notification' in window;
-        this.initNotificationSettings();
-    }
-
-    async initNotificationSettings() {
-        const notificationsToggle = document.getElementById('notificationsEnabled');
-        if (!this.hasNotificationAPI) {
-            notificationsToggle.disabled = true;
-            return;
-        }
-
-        notificationsToggle.addEventListener('change', async (e) => {
-            await this.toggleNotifications(e.target.checked);
-        });
-
-        if (this.isIOS) {
-            this.showIOSInstallMessage();
-        }
-    }
-
-    showIOSInstallMessage() {
-        const message = document.createElement('div');
-        message.className = 'system-message info';
-        message.textContent = 'להתראות מלאות באייפון, הוסף את האפליקציה למסך הבית';
-        document.body.appendChild(message);
-        setTimeout(() => message.remove(), 5000);
-    }
-
-    async toggleNotifications(enabled) {
-        if (!enabled) return;
-
-        try {
-            const permission = await Notification.requestPermission();
-            const systemMessage = document.getElementById('systemMessage');
-            
-            if (permission === 'granted') {
-                systemMessage.textContent = 'התראות הופעלו בהצלחה';
-                systemMessage.className = 'system-message info';
-            } else {
-                document.getElementById('notificationsEnabled').checked = false;
-                systemMessage.textContent = 'נא לאשר התראות בדפדפן';
-                systemMessage.className = 'system-message error';
-            }
-            
-            systemMessage.style.display = 'block';
-            setTimeout(() => systemMessage.style.display = 'none', 3000);
-            
-        } catch (error) {
-            console.error('שגיאה בהפעלת התראות:', error);
-        }
-    }
-
-    async showNotification(title, message) {
-        if (!this.hasNotificationAPI || !document.getElementById('notificationsEnabled').checked) {
-            return;
-        }
-
-        try {
-            if ('serviceWorker' in navigator && navigator.serviceWorker.ready) {
-                const registration = await navigator.serviceWorker.ready;
-                await registration.showNotification(title, {
-                    body: message,
-                    icon: './logo1.png',
-                    badge: './logo3.png',
-                    vibrate: [200, 100, 200],
-                    requireInteraction: true,
-                    silent: false
-                });
-            } else {
-                new Notification(title, {
-                    body: message,
-                    icon: './logo1.png'
-                });
-            }
-        } catch (error) {
-            console.error('שגיאה בשליחת התראה:', error);
-        }
     }
 }
 
@@ -196,32 +198,61 @@ class PomodoroTimer {
         this.isRunning = false;
         this.isWorkTime = true;
         this.timer = null;
-        this.powerManager = new PowerManager();
-        this.notificationManager = new NotificationManager();
         
+        this.powerManager = new PowerManager();
+        this.initializeElements();
+        this.initializeEventListeners();
+        this.loadState();
+
+        // מבקש הרשאת התראות בהתחלה
+        NotificationHandler.requestPermission().then(granted => {
+            if (granted) {
+                document.getElementById('notificationsEnabled').checked = true;
+                NotificationHandler.showLocalNotification(
+                    'התראות',
+                    'התראות הופעלו בהצלחה!'
+                );
+            } else {
+                document.getElementById('notificationsEnabled').checked = false;
+                NotificationHandler.showLocalNotification(
+                    'התראות',
+                    'לקבלת התראות, אנא אשר התראות בדפדפן'
+                );
+            }
+        });
+    }
+
+    initializeElements() {
         this.timerDisplay = document.getElementById('timer');
         this.startBtn = document.getElementById('startBtn');
         this.resetBtn = document.getElementById('resetBtn');
         this.statusText = document.getElementById('status');
         this.workTimeInput = document.getElementById('workTime');
         this.breakTimeInput = document.getElementById('breakTime');
-        
-        this.initializeEventListeners();
-        this.loadState();
     }
-    
+
     initializeEventListeners() {
         this.startBtn.addEventListener('click', () => this.toggleTimer());
         this.resetBtn.addEventListener('click', () => this.resetTimer());
+        
         this.workTimeInput.addEventListener('change', () => {
             this.workTime = this.workTimeInput.value * 60;
             if (this.isWorkTime) this.currentTime = this.workTime;
             this.updateDisplay();
         });
+        
         this.breakTimeInput.addEventListener('change', () => {
             this.breakTime = this.breakTimeInput.value * 60;
             if (!this.isWorkTime) this.currentTime = this.breakTime;
             this.updateDisplay();
+        });
+
+        // מאזין לשינויים בהתראות
+        document.getElementById('notificationsEnabled').addEventListener('change', async (e) => {
+            if (e.target.checked) {
+                const granted = await NotificationHandler.requestPermission();
+                e.target.checked = granted;
+            }
         });
     }
 
@@ -236,6 +267,7 @@ class PomodoroTimer {
     startTimer() {
         this.isRunning = true;
         this.startBtn.textContent = 'השהה';
+        
         this.timer = setInterval(() => {
             this.currentTime--;
             if (this.currentTime <= 0) {
@@ -268,8 +300,10 @@ class PomodoroTimer {
         this.isWorkTime = !this.isWorkTime;
         this.currentTime = this.isWorkTime ? this.workTime : this.breakTime;
         this.statusText.textContent = this.isWorkTime ? 'זמן עבודה' : 'זמן הפסקה';
+        
         const message = this.isWorkTime ? 'זמן לחזור לעבודה!' : 'זמן להפסקה!';
-        this.notificationManager.showNotification('TimeMaster', message);
+        NotificationHandler.showNotification('TimeMaster', message);
+        
         this.saveState();
     }
 
@@ -285,7 +319,8 @@ class PomodoroTimer {
             currentTime: this.currentTime,
             isWorkTime: this.isWorkTime,
             workTime: this.workTime,
-            breakTime: this.breakTime
+            breakTime: this.breakTime,
+            timestamp: Date.now()
         }));
     }
 
@@ -297,6 +332,7 @@ class PomodoroTimer {
             this.breakTime = state.breakTime;
             this.isWorkTime = state.isWorkTime;
             this.currentTime = state.currentTime;
+            
             this.workTimeInput.value = this.workTime / 60;
             this.breakTimeInput.value = this.breakTime / 60;
             this.statusText.textContent = this.isWorkTime ? 'זמן עבודה' : 'זמן הפסקה';
@@ -305,5 +341,17 @@ class PomodoroTimer {
     }
 }
 
-// Initialize the timer
+// רישום Service Worker
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', async () => {
+        try {
+            const registration = await navigator.serviceWorker.register('sw.js');
+            console.log('ServiceWorker registration successful');
+        } catch (err) {
+            console.log('ServiceWorker registration failed: ', err);
+        }
+    });
+}
+
+// יצירת המופע של הטיימר
 const pomodoro = new PomodoroTimer();
