@@ -33,6 +33,6 @@ The main goals of this project are:
 
 ## Credits
 
-This project was developed by [David Tam](https://github.com/Davidtam561).  
+This project was developed by [DevByAI](https://github.com/Davidtam561).  
 
 Feel free to use or modify the project as needed, but please give credit to the original developer.  
